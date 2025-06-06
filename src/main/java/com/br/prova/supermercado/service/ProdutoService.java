@@ -36,7 +36,6 @@ public class ProdutoService {
                     .orElseThrow(() -> new ProdutoNaoEncontradoException(produto.getId()));
         }
 
-        // Adiciona o produto à lista do estoque, se ainda não estiver
         if (!estoque.getListaDeProdutos().contains(produto)) {
             estoque.getListaDeProdutos().add(produto);
         }
