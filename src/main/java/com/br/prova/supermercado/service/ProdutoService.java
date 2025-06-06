@@ -10,6 +10,7 @@ import com.br.prova.supermercado.repository.EstoqueRepository;
 import com.br.prova.supermercado.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class ProdutoService {
     @Autowired
     private EstoqueRepository estoqueRepository;
 
+    @Transactional
     public ProdutoDTO salvar(ProdutoDTO dto) {
         Estoque estoque = estoqueRepository.findById(dto.getEstoqueId())
                 .orElseThrow(() -> new EstoqueNaoEncontradoException(dto.getEstoqueId()));
@@ -34,7 +36,14 @@ public class ProdutoService {
                     .orElseThrow(() -> new ProdutoNaoEncontradoException(produto.getId()));
         }
 
+        // Adiciona o produto à lista do estoque, se ainda não estiver
+        if (!estoque.getListaDeProdutos().contains(produto)) {
+            estoque.getListaDeProdutos().add(produto);
+        }
+
         Produto salvo = produtoRepository.save(produto);
+        estoqueRepository.save(estoque);
+
         return ProdutoMapper.toDTO(salvo);
     }
 

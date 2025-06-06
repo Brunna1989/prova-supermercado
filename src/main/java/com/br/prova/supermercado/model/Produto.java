@@ -25,4 +25,17 @@ public class Produto {
 
     @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Item> itens = new ArrayList<>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Produto)) return false;
+        Produto produto = (Produto) o;
+        return id != null && id.equals(produto.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return 31;
+    }
 }
