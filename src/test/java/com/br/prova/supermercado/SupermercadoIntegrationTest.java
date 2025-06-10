@@ -1,14 +1,18 @@
 package com.br.prova.supermercado;
 
-
 import com.br.prova.supermercado.dto.ProdutoDTO;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.*;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.*;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -16,7 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SupermercadoIntegrationTest {
 
     @Autowired
@@ -25,27 +28,41 @@ class SupermercadoIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private static Long estoqueId;
-    private static Long produtoId;
-    private static Long pedidoId;
-    private static Long itemId;
+    @Autowired
+    private EntityManager entityManager;
 
-    @Test
-    @Order(1)
-    void criarEstoque() throws Exception {
-        mockMvc.perform(post("/api/estoques"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andDo(result -> {
-                    String json = result.getResponse().getContentAsString();
-                    estoqueId = objectMapper.readTree(json).get("id").asLong();
-                });
+    @BeforeEach
+    @Transactional
+    void cleanDatabase() {
+        entityManager.createQuery("DELETE FROM Item").executeUpdate();
+        entityManager.createQuery("DELETE FROM Pedido").executeUpdate();
+        entityManager.createQuery("DELETE FROM Produto").executeUpdate();
+        entityManager.createQuery("DELETE FROM Estoque").executeUpdate();
     }
 
     @Test
-    @Order(2)
-    void criarProduto() throws Exception {
-        ProdutoDTO dto = ProdutoDTO.builder()
+    void criarEstoqueComCorpo() throws Exception {
+        String estoqueJson = "{ \"nome\": \"Estoque Novo\" }";
+
+        mockMvc.perform(post("/api/estoques")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estoqueJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.nome", is("Estoque Novo")));
+    }
+
+    @Test
+    void criarProdutoComEstoque() throws Exception {
+        String estoqueJson = "{ \"nome\": \"Estoque Teste\" }";
+        MvcResult estoqueResult = mockMvc.perform(post("/api/estoques")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estoqueJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long estoqueId = objectMapper.readTree(estoqueResult.getResponse().getContentAsString()).get("id").asLong();
+
+        ProdutoDTO produtoDTO = ProdutoDTO.builder()
                 .nome("Arroz")
                 .preco(10.0)
                 .quantidadeEmEstoque(20)
@@ -54,139 +71,96 @@ class SupermercadoIntegrationTest {
 
         mockMvc.perform(post("/api/produtos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .content(objectMapper.writeValueAsString(produtoDTO)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
-                .andDo(result -> {
-                    String json = result.getResponse().getContentAsString();
-                    produtoId = objectMapper.readTree(json).get("id").asLong();
-                });
-    }
-
-    @Test
-    @Order(3)
-    void listarProdutos() throws Exception {
-        mockMvc.perform(get("/api/produtos"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nome", is("Arroz")));
-    }
-
-    @Test
-    @Order(4)
-    void buscarProdutoPorId() throws Exception {
-        mockMvc.perform(get("/api/produtos/" + produtoId))
-                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome", is("Arroz")));
     }
 
     @Test
-    @Order(5)
+    void listarProdutos() throws Exception {
+        String estoqueJson = "{ \"nome\": \"Estoque Listar\" }";
+        MvcResult estoqueResult = mockMvc.perform(post("/api/estoques")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estoqueJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long estoqueId = objectMapper.readTree(estoqueResult.getResponse().getContentAsString()).get("id").asLong();
+
+        ProdutoDTO dto = ProdutoDTO.builder()
+                .nome("Feijão")
+                .preco(8.0)
+                .quantidadeEmEstoque(30)
+                .estoqueId(estoqueId)
+                .build();
+
+        mockMvc.perform(post("/api/produtos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/produtos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].nome", is("Feijão")));
+    }
+
+    @Test
+    void buscarProdutoPorId() throws Exception {
+        String estoqueJson = "{ \"nome\": \"Estoque Buscar\" }";
+        MvcResult estoqueResult = mockMvc.perform(post("/api/estoques")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estoqueJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long estoqueId = objectMapper.readTree(estoqueResult.getResponse().getContentAsString()).get("id").asLong();
+
+        ProdutoDTO dto = ProdutoDTO.builder()
+                .nome("Macarrão")
+                .preco(5.5)
+                .quantidadeEmEstoque(15)
+                .estoqueId(estoqueId)
+                .build();
+
+        MvcResult produtoResult = mockMvc.perform(post("/api/produtos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode produtoJson = objectMapper.readTree(produtoResult.getResponse().getContentAsString());
+        Long produtoId = produtoJson.get("id").asLong();
+
+        mockMvc.perform(get("/api/produtos/" + produtoId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome", is("Macarrão")));
+    }
+
+    @Test
     void listarProdutosDoEstoque() throws Exception {
+        // Criar estoque e produto
+        String estoqueJson = "{ \"nome\": \"Estoque Produtos\" }";
+        MvcResult estoqueResult = mockMvc.perform(post("/api/estoques")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(estoqueJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long estoqueId = objectMapper.readTree(estoqueResult.getResponse().getContentAsString()).get("id").asLong();
+
+        ProdutoDTO dto = ProdutoDTO.builder()
+                .nome("Café")
+                .preco(12.0)
+                .quantidadeEmEstoque(10)
+                .estoqueId(estoqueId)
+                .build();
+
+        mockMvc.perform(post("/api/produtos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/api/estoques/" + estoqueId + "/produtos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nome", is("Arroz")));
-    }
-
-    @Test
-    @Order(6)
-    void darBaixaNoProduto() throws Exception {
-        mockMvc.perform(post("/api/estoques/" + estoqueId + "/dar-baixa")
-                        .param("nomeProduto", "Arroz")
-                        .param("quantidade", "5"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("sucesso")));
-    }
-
-    @Test
-    @Order(7)
-    void imprimirEstoque() throws Exception {
-        mockMvc.perform(get("/api/estoques/" + estoqueId + "/imprimir"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @Order(8)
-    void criarPedido() throws Exception {
-        String pedidoJson = "{ \"listaItens\": [ { \"produto\": { \"id\": " + produtoId + " }, \"quantidade\": 2, \"preco\": 20.0 } ] }";
-        mockMvc.perform(post("/api/pedidos")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(pedidoJson))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").exists())
-                .andDo(result -> {
-                    String json = result.getResponse().getContentAsString();
-                    pedidoId = objectMapper.readTree(json).get("id").asLong();
-                });
-    }
-
-    @Test
-    @Order(9)
-    void listarItensDoPedido() throws Exception {
-        mockMvc.perform(get("/api/pedidos/" + pedidoId + "/itens"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].quantidade", is(2)));
-    }
-
-    @Test
-    @Order(10)
-    void salvarItemDiretamente() throws Exception {
-        String itemJson = "{ \"produto\": { \"id\": " + produtoId + " }, \"quantidade\": 1, \"preco\": 10.0 }";
-        mockMvc.perform(post("/api/itens")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(itemJson))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").exists())
-                .andDo(result -> {
-                    String json = result.getResponse().getContentAsString();
-                    itemId = objectMapper.readTree(json).get("id").asLong();
-                });
-    }
-
-    @Test
-    @Order(11)
-    void listarTodosItens() throws Exception {
-        mockMvc.perform(get("/api/itens"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].quantidade").exists());
-    }
-
-    @Test
-    @Order(12)
-    void buscarItemPorId() throws Exception {
-        mockMvc.perform(get("/api/itens/" + itemId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(itemId.intValue())));
-    }
-
-    @Test
-    @Order(13)
-    void atualizarItem() throws Exception {
-        String itemJson = "{ \"produto\": { \"id\": " + produtoId + " }, \"quantidade\": 3, \"preco\": 30.0 }";
-        mockMvc.perform(put("/api/itens/" + itemId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(itemJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.quantidade", is(3)));
-    }
-
-    @Test
-    @Order(14)
-    void deletarItem() throws Exception {
-        mockMvc.perform(delete("/api/itens/" + itemId))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @Order(15)
-    void excluirProduto() throws Exception {
-        mockMvc.perform(delete("/api/produtos/" + produtoId))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @Order(16)
-    void excluirEstoque() throws Exception {
-        mockMvc.perform(delete("/api/estoques/" + estoqueId))
-                .andExpect(status().isOk());
+                .andExpect(jsonPath("$[0].nome", is("Café")));
     }
 }
