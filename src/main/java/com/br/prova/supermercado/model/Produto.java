@@ -19,7 +19,7 @@ public class Produto {
     private double preco;
     private int quantidadeEmEstoque;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "estoque_id", nullable = false)
     private Estoque estoque;
 

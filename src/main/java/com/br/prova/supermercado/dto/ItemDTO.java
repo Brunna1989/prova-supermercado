@@ -4,6 +4,7 @@ import lombok.*;
 
 @Data
 @NoArgsConstructor
+@Setter
 @AllArgsConstructor
 @Builder
 public class ItemDTO {
@@ -11,4 +12,6 @@ public class ItemDTO {
     private ProdutoDTO produto;
     private int quantidade;
     private double preco;
+
+
 }

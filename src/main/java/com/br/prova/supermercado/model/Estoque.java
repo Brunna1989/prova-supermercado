@@ -17,4 +17,11 @@ public class Estoque {
 
     @OneToMany(mappedBy = "estoque", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Produto> listaDeProdutos = new ArrayList<>();
+
+    public void setProduto(Produto produto) {
+    }
+
+    public void setQuantidade(int i) {
+
+    }
 }
