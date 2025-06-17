@@ -1,103 +1,57 @@
 package com.br.prova.supermercado;
 
-import com.br.prova.supermercado.dto.ItemDTO;
 import com.br.prova.supermercado.dto.PedidoDTO;
 import com.br.prova.supermercado.dto.ProdutoDTO;
-import com.br.prova.supermercado.model.Estoque;
-import com.br.prova.supermercado.model.Produto;
-import com.br.prova.supermercado.repository.EstoqueRepository;
-import com.br.prova.supermercado.repository.ProdutoRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 
-import java.util.Collections;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class PedidoControllerIntegrationTest {
 
-    @LocalServerPort
-    private int port;
-
-    @Autowired
-    private ProdutoRepository produtoRepository;
-
-    @Autowired
-    private EstoqueRepository estoqueRepository;
-
     @Autowired
     private TestRestTemplate restTemplate;
 
-    private Produto produto;
-    private Estoque estoque;
-
-    @BeforeEach
-    public void setup() {
-        estoqueRepository.deleteAll();
-        produtoRepository.deleteAll();
-
-        estoque = new Estoque();
-        estoque.setQuantidade(100);
-        estoque = estoqueRepository.save(estoque);
-
-        produto = new Produto();
-        produto.setNome("Arroz Integral");
-        produto.setPreco(7.50);
-        produto.setQuantidadeEmEstoque(100);
-        produto.setEstoque(estoque);
-        produto = produtoRepository.save(produto);
-
-        estoque.setProduto(produto);
-        estoqueRepository.save(estoque);
-    }
-
     @Test
-    public void deveCriarPedidoComSucesso() throws Exception {
-        ProdutoDTO produtoDTO = ProdutoDTO.builder()
-                .id(produto.getId())
-                .nome(produto.getNome())
-                .preco(produto.getPreco())
-                .quantidadeEmEstoque(produto.getQuantidadeEmEstoque())
-                .estoqueId(estoque.getId()) // Corrigido aqui!
-                .build();
+    void criarPedidoEAbaterEstoque() {
+        ResponseEntity<Map> estoqueResp = restTemplate.postForEntity("/api/estoques", null, Map.class);
+        Long estoqueId = Long.valueOf(estoqueResp.getBody().get("id").toString());
 
-        ItemDTO itemDTO = ItemDTO.builder()
-                .produto(produtoDTO)
-                .quantidade(3)
-                .preco(produto.getPreco())
+        ProdutoDTO produto = ProdutoDTO.builder()
+                .nome("Arroz")
+                .preco(10.0)
+                .quantidadeEmEstoque(50)
+                .estoqueId(estoqueId)
                 .build();
+        ResponseEntity<ProdutoDTO> prodResp = restTemplate.postForEntity("/api/produtos", produto, ProdutoDTO.class);
+        Long produtoId = prodResp.getBody().getId();
 
-        PedidoDTO pedidoDTO = PedidoDTO.builder()
-                .listaItens(Collections.singletonList(itemDTO))
-                .valorTotalDoPedido(produto.getPreco() * itemDTO.getQuantidade())
-                .build();
+        String pedidoJson = """
+        {
+          "listaItens": [
+            {
+              "produto": { "id": %d },
+              "quantidade": 5
+            }
+          ]
+        }
+        """.formatted(produtoId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> pedidoEntity = new HttpEntity<>(pedidoJson, headers);
 
-        HttpEntity<String> request = new HttpEntity<>(
-                new ObjectMapper().writeValueAsString(pedidoDTO),
-                headers
-        );
+        ResponseEntity<PedidoDTO> pedidoResp = restTemplate.postForEntity("/api/pedidos", pedidoEntity, PedidoDTO.class);
+        assertThat(pedidoResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(pedidoResp.getBody().getListaItens().get(0).getQuantidade()).isEqualTo(5);
 
-        ResponseEntity<PedidoDTO> response = restTemplate.exchange(
-                "http://localhost:" + port + "/api/pedidos",
-                HttpMethod.POST,
-                request,
-                PedidoDTO.class
-        );
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertNotNull(response.getBody().getId());
-        assertEquals(1, response.getBody().getListaItens().size());
-        assertEquals(produto.getId(), response.getBody().getListaItens().get(0).getProduto().getId());
+        ResponseEntity<ProdutoDTO> prodAtualizado = restTemplate.getForEntity("/api/produtos/" + produtoId, ProdutoDTO.class);
+        assertThat(prodAtualizado.getBody().getQuantidadeEmEstoque()).isEqualTo(45);
     }
 }
