@@ -117,11 +117,5 @@ _Não é necessário corpo na requisição_
 - Todos os testes são independentes e autocontidos.
 - O menu console pode ser executado pela classe `SupermercadoConsoleApp`.
 
-## 🎥 Vídeo demonstrativo:
-
-[Assista no YouTube](https://www.youtube.com/watch?v=AYfF-ukglmA)
-
-
-
 ---
 Desenvolvido para fins acadêmicos e de demonstração.
