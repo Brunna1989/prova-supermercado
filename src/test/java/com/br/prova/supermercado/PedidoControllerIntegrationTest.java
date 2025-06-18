@@ -19,7 +19,7 @@ public class PedidoControllerIntegrationTest {
     private TestRestTemplate restTemplate;
 
     @Test
-    void criarPedidoEAbaterEstoque() {
+    void criarPedidoEAbaterEstoqueEPagar() {
         ResponseEntity<Map> estoqueResp = restTemplate.postForEntity("/api/estoques", null, Map.class);
         Long estoqueId = Long.valueOf(estoqueResp.getBody().get("id").toString());
 
@@ -53,5 +53,21 @@ public class PedidoControllerIntegrationTest {
 
         ResponseEntity<ProdutoDTO> prodAtualizado = restTemplate.getForEntity("/api/produtos/" + produtoId, ProdutoDTO.class);
         assertThat(prodAtualizado.getBody().getQuantidadeEmEstoque()).isEqualTo(45);
+
+        String pagamentoJson = """
+        {
+          "valorPago": 100.0
+        }
+        """;
+        HttpEntity<String> pagamentoEntity = new HttpEntity<>(pagamentoJson, headers);
+        ResponseEntity<PedidoDTO> pagamentoResp = restTemplate.exchange(
+                "/api/pedidos/" + pedidoResp.getBody().getId() + "/pagar",
+                HttpMethod.PUT,
+                pagamentoEntity,
+                PedidoDTO.class
+        );
+        assertThat(pagamentoResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(pagamentoResp.getBody().getValorPago()).isEqualTo(100.0);
+        assertThat(pagamentoResp.getBody().getTroco()).isEqualTo(50.0);
     }
 }

@@ -77,11 +77,12 @@ public class SupermercadoConsoleApp {
 					break;
 				case 0:
 					System.out.println("Saindo...");
+					scanner.close();
+					System.exit(0);
 					break;
 				default:
 					System.out.println("Opção inválida.");
 			}
 		}
-		scanner.close();
 	}
 }

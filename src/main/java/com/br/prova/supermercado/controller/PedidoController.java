@@ -2,11 +2,11 @@ package com.br.prova.supermercado.controller;
 
 import com.br.prova.supermercado.dto.PedidoDTO;
 import com.br.prova.supermercado.service.PedidoService;
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pedidos")
@@ -20,29 +20,28 @@ public class PedidoController {
 
     @PostMapping
     public ResponseEntity<PedidoDTO> criarPedido(@RequestBody PedidoDTO pedidoDTO) {
-        PedidoDTO criado = pedidoService.salvar(pedidoDTO);
-        return ResponseEntity.ok(criado);
+        PedidoDTO salvo = pedidoService.salvar(pedidoDTO);
+        return ResponseEntity.ok(salvo);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<PedidoDTO>> listarPedidos() {
+        return ResponseEntity.ok(pedidoService.listarTodos());
     }
 
     @PutMapping("/{id}/pagar")
-    public ResponseEntity<PedidoDTO> pagarPedido(@PathVariable("id") Long id, @RequestBody PagamentoRequest pagamento) {
-        PedidoDTO atualizado = pedidoService.registrarPagamento(id, pagamento.getValorPago());
-        return ResponseEntity.ok(atualizado);
+    public ResponseEntity<PedidoDTO> pagarPedido(@PathVariable("id") Long id, @RequestBody Map<String, Double> body) {
+        double valorPago = body.get("valorPago");
+        PedidoDTO dto = pedidoService.registrarPagamento(id, valorPago);
+        return ResponseEntity.ok(dto);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<String> handleRuntime(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-    }
-
-    @Getter
-    @Setter
-    public static class PagamentoRequest {
-        private double valorPago;
+    @GetMapping("/{id}")
+    public ResponseEntity<PedidoDTO> buscarPorId(@PathVariable("id") Long id) {
+        return pedidoService.listarTodos().stream()
+                .filter(p -> p.getId().equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
