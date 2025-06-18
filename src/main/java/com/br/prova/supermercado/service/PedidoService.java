@@ -132,4 +132,10 @@ public class PedidoService {
         );
         return dto;
     }
+
+    public List<PedidoDTO> listarTodos() {
+        return pedidoRepository.findAll().stream()
+                .map(this::mapearParaDTO)
+                .toList();
+    }
 }
