@@ -62,7 +62,6 @@
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
-
 		<!-- Hibernate -->
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
@@ -117,6 +116,9 @@
 							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 				</configuration>
 			</plugin>
 
