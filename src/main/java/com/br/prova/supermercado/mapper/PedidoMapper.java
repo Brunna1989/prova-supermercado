@@ -1,3 +1,4 @@
+// src/main/java/com/br/prova/supermercado/mapper/PedidoMapper.java
 package com.br.prova.supermercado.mapper;
 
 import com.br.prova.supermercado.dto.PedidoDTO;
@@ -29,6 +30,8 @@ public class PedidoMapper {
                         .map(ItemMapper::toDTO)
                         .collect(Collectors.toList()))
                 .valorTotalDoPedido(pedido.getValorTotalDoPedido())
+                .valorPago(pedido.getValorPago())
+                .troco(pedido.getTroco())
                 .build();
     }
 
@@ -38,6 +41,8 @@ public class PedidoMapper {
         Pedido pedido = Pedido.builder()
                 .id(dto.getId())
                 .valorTotalDoPedido(dto.getValorTotalDoPedido())
+                .valorPago(dto.getValorPago())
+                .troco(dto.getTroco())
                 .build();
 
         List<Item> itens = dto.getListaItens() != null

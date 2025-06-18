@@ -21,9 +21,17 @@ public class Pedido {
 
     private double valorTotalDoPedido;
 
+    private Double valorPago;
+    private Double troco;
+
     public void calcularValorTotal() {
         this.valorTotalDoPedido = listaItens.stream()
                 .mapToDouble(Item::getPreco)
                 .sum();
+    }
+
+    public void registrarPagamento(double valorPago) {
+        this.valorPago = valorPago;
+        this.troco = valorPago - this.valorTotalDoPedido;
     }
 }

@@ -138,4 +138,23 @@ class PedidoServiceTest {
         assertTrue(ex.getMessage().contains("Pedido não encontrado"));
         verify(pedidoRepository).findById(99L);
     }
+
+    @Test
+    void deveCalcularTrocoCorretamente() {
+        PedidoService service = new PedidoService(null, null);
+        double troco = service.calcularTroco(37.50, 50.00);
+        assertEquals(12.50, troco, 0.001);
+    }
+
+    @Test
+    void deveCalcularNotasTroco() {
+        PedidoService service = new PedidoService(null, null);
+        Map<Double, Integer> notas = service.calcularNotasTroco(18.35);
+        assertEquals(1, notas.get(10.0));
+        assertEquals(1, notas.get(5.0));
+        assertEquals(1, notas.get(2.0));
+        assertEquals(1, notas.get(1.0));
+        assertEquals(1, notas.get(0.25));
+        assertEquals(1, notas.get(0.10));
+    }
 }

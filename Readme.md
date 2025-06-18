@@ -109,19 +109,49 @@ _Não é necessário corpo na requisição_
   ]
 }
 ````
+### 💵 Pagar Pedido e Calcular Troco
 
+**Endpoint:**  
+`PUT http://localhost:8080/api/pedidos/{id}/pagar`
+
+**Corpo da Requisição (JSON):**
+```json
+{
+  "valorPago": 50.00
+}
+
+````
+
+## Resposta de Exemplo: ##
+
+```json
+{
+  "id": 1,
+  "listaItens": [
+    {
+      "id": 10,
+      "produto": {
+        "id": 1,
+        "nome": "Café Torrado",
+        "preco": 15.90,
+        "quantidadeEmEstoque": 98,
+        "estoqueId": 1
+      },
+      "quantidade": 2,
+      "preco": 31.80
+    }
+  ],
+  "valorTotalDoPedido": 31.80,
+  "valorPago": 50.00,
+  "troco": 18.20
+}
+```
 
 ## Observações
 
 - O banco de dados é resetado a cada execução (H2 em memória).
 - Todos os testes são independentes e autocontidos.
 - O menu console pode ser executado pela classe `SupermercadoConsoleApp`.
-
-## 🎥 Vídeo demonstrativo:
-
-[Assista no YouTube](https://www.youtube.com/watch?v=AYfF-ukglmA)
-
-
 
 ---
 Desenvolvido para fins acadêmicos e de demonstração.
