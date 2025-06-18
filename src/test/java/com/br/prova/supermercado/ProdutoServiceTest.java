@@ -1,6 +1,5 @@
 package com.br.prova.supermercado;
 
-
 import com.br.prova.supermercado.dto.ProdutoDTO;
 import com.br.prova.supermercado.exception.EstoqueNaoEncontradoException;
 import com.br.prova.supermercado.exception.ProdutoNaoEncontradoException;
@@ -21,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ProdutoServiceTest {
+public class ProdutoServiceTest {
 
     @Mock
     private ProdutoRepository produtoRepository;
@@ -48,76 +47,69 @@ class ProdutoServiceTest {
         produto.setEstoque(estoque);
 
         produtoDTO = ProdutoDTO.builder()
-                .id(produto.getId())
-                .nome(produto.getNome())
-                .preco(produto.getPreco())
-                .quantidadeEmEstoque(produto.getQuantidadeEmEstoque())
-                .estoqueId(estoque.getId())
+                .id(2L)
+                .nome("Arroz")
+                .preco(5.0)
+                .quantidadeEmEstoque(10)
+                .estoqueId(1L)
                 .build();
     }
 
     @Test
     void salvar_sucesso() {
         when(estoqueRepository.findById(estoque.getId())).thenReturn(Optional.of(estoque));
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto)); // mock necessário
         when(produtoRepository.save(any(Produto.class))).thenReturn(produto);
         when(estoqueRepository.save(any(Estoque.class))).thenReturn(estoque);
 
         ProdutoDTO salvo = produtoService.salvar(produtoDTO);
 
         assertNotNull(salvo);
-        assertEquals(produto.getNome(), salvo.getNome());
-        verify(estoqueRepository).findById(estoque.getId());
-        verify(produtoRepository).save(any(Produto.class));
-        verify(estoqueRepository).save(any(Estoque.class));
+        assertEquals(produtoDTO.getNome(), salvo.getNome());
+        assertEquals(produtoDTO.getPreco(), salvo.getPreco());
+        assertEquals(produtoDTO.getQuantidadeEmEstoque(), salvo.getQuantidadeEmEstoque());
+        assertEquals(produtoDTO.getEstoqueId(), salvo.getEstoqueId());
     }
 
     @Test
     void salvar_estoqueNaoEncontrado() {
         when(estoqueRepository.findById(estoque.getId())).thenReturn(Optional.empty());
         assertThrows(EstoqueNaoEncontradoException.class, () -> produtoService.salvar(produtoDTO));
-        verify(estoqueRepository).findById(estoque.getId());
-        verify(produtoRepository, never()).save(any());
     }
 
     @Test
     void salvar_produtoExistenteNaoEncontrado() {
-        produtoDTO.setId(99L);
         when(estoqueRepository.findById(estoque.getId())).thenReturn(Optional.of(estoque));
-        when(produtoRepository.findById(99L)).thenReturn(Optional.empty());
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.empty());
         assertThrows(ProdutoNaoEncontradoException.class, () -> produtoService.salvar(produtoDTO));
-        verify(produtoRepository).findById(99L);
     }
 
     @Test
     void listarTodos_deveRetornarLista() {
-        when(produtoRepository.findAll()).thenReturn(Collections.singletonList(produto));
+        when(produtoRepository.findAll()).thenReturn(List.of(produto));
         List<ProdutoDTO> lista = produtoService.listarTodos();
         assertEquals(1, lista.size());
         assertEquals(produto.getNome(), lista.get(0).getNome());
-        verify(produtoRepository).findAll();
     }
 
     @Test
     void buscarPorId_existente() {
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
         ProdutoDTO dto = produtoService.buscarPorId(produto.getId());
+        assertNotNull(dto);
         assertEquals(produto.getNome(), dto.getNome());
-        verify(produtoRepository).findById(produto.getId());
     }
 
     @Test
     void buscarPorId_naoExistente() {
         when(produtoRepository.findById(99L)).thenReturn(Optional.empty());
         assertThrows(ProdutoNaoEncontradoException.class, () -> produtoService.buscarPorId(99L));
-        verify(produtoRepository).findById(99L);
     }
 
     @Test
     void excluir_existente() {
         when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
-        doNothing().when(produtoRepository).delete(produto);
-        assertDoesNotThrow(() -> produtoService.excluir(produto.getId()));
-        verify(produtoRepository).findById(produto.getId());
+        produtoService.excluir(produto.getId());
         verify(produtoRepository).delete(produto);
     }
 

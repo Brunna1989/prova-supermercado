@@ -10,16 +10,14 @@ import com.br.prova.supermercado.repository.ProdutoRepository;
 import com.br.prova.supermercado.service.PedidoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class PedidoServiceTest {
+public class PedidoServiceTest {
 
     private PedidoRepository pedidoRepository;
     private ProdutoRepository produtoRepository;
